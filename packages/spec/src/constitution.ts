@@ -6,6 +6,14 @@ const id = z
   .string()
   .regex(/^[a-z0-9][a-z0-9-]*$/, "use lowercase letters, digits and dashes");
 
+// A rule reference in reports: "rule-id" (Constitution) or "pack-id/rule-id" (pack rule).
+const ruleRef = z
+  .string()
+  .regex(
+    /^[a-z0-9][a-z0-9-]*(\/[a-z0-9][a-z0-9-]*)?$/,
+    "use rule-id or pack-id/rule-id",
+  );
+
 export const ModuleSchema = z.object({
   id,
   path: z.union([z.string(), z.array(z.string()).min(1)]),
@@ -139,7 +147,7 @@ export type Constitution = z.infer<typeof ConstitutionSchema>;
 // ---- Verifier output ----
 
 export const ViolationSchema = z.object({
-  ruleId: id,
+  ruleId: ruleRef,
   severity: z.enum(["error", "warn"]),
   message: z.string(),
   file: z.string(),

@@ -1,0 +1,136 @@
+# This repository's own constitution (see ARCHITECTURE.md, sections 4 and 14).
+version: 1
+
+modules:
+  - id: spec
+    path: "packages/spec/**"
+    description: Constitution, pack and report schemas
+  - id: analyzer
+    path: "packages/analyzer/**"
+    description: Parses TS/JS and builds the module graph
+  - id: verifier
+    path: "packages/verifier/**"
+    description: Evaluates rules and produces a CheckReport
+  - id: emitters
+    path: "packages/emitters/**"
+    description: Renders instruction files for each AI tool
+  - id: packs
+    path: "packs/**"
+    description: First-party Engineering Packs (declarative data)
+  - id: intent
+    path: "packages/intent/**"
+    description: Closed. LLM turns natural language into proposed rules
+  - id: cli
+    path: "packages/cli/**"
+    description: The arch command line
+  - id: mcp-server
+    path: "packages/mcp-server/**"
+    description: Exposes constraints and checks to agents over MCP
+  - id: github-app
+    path: "apps/github-app/**"
+    description: Closed. PR checks and comments
+  - id: api
+    path: "apps/api/**"
+    description: Closed. Cloud API and persistence
+  - id: web
+    path: "apps/web/**"
+    description: Closed. Dashboard
+
+rules:
+  - id: spec-imports-nothing
+    type: allow-only
+    module: spec
+    mayImport: []
+  - id: analyzer-deps
+    type: allow-only
+    module: analyzer
+    mayImport: [spec]
+  - id: verifier-deps
+    type: allow-only
+    module: verifier
+    mayImport: [spec]
+  - id: emitters-deps
+    type: allow-only
+    module: emitters
+    mayImport: [spec]
+  - id: packs-deps
+    type: allow-only
+    module: packs
+    mayImport: [spec]
+  - id: intent-deps
+    type: allow-only
+    module: intent
+    mayImport: [spec, verifier]
+  - id: cli-deps
+    type: allow-only
+    module: cli
+    mayImport: [spec, analyzer, verifier, emitters]
+  - id: mcp-server-deps
+    type: allow-only
+    module: mcp-server
+    mayImport: [spec, analyzer, verifier]
+  - id: github-app-deps
+    type: allow-only
+    module: github-app
+    mayImport: [spec, analyzer, verifier]
+  - id: api-deps
+    type: allow-only
+    module: api
+    mayImport: [spec]
+  - id: web-deps
+    type: allow-only
+    module: web
+    mayImport: [spec]
+  - id: no-module-cycles
+    type: no-cycles
+    scope: modules
+
+invariants:
+  - id: open-never-imports-closed
+    intent: Open-source packages must never import closed packages.
+    check:
+      type: rule-ref
+      ruleIds:
+        - spec-imports-nothing
+        - analyzer-deps
+        - verifier-deps
+        - emitters-deps
+        - packs-deps
+        - cli-deps
+        - mcp-server-deps
+  - id: verifier-is-pure
+    intent: verifier and analyzer never import network, filesystem-write, database or LLM modules.
+  - id: llm-only-in-intent
+    intent: Only the intent package may call an LLM provider.
+  - id: db-only-in-api
+    intent: Only the api app may access the database, through repository functions.
+  - id: adapters-hold-no-rule-logic
+    intent: cli, mcp-server and github-app contain no rule logic; they call verifier.
+  - id: packs-are-declarative-data
+    intent: Engineering Packs are declarative data only and never contain executable code.
+
+decisions:
+  - id: d1-yaml-constitution
+    title: Constitution is YAML, schema in Zod
+    why: Readable by humans, validated by code.
+  - id: d2-deterministic-verifier
+    title: Verifier is deterministic and uses no LLM
+    why: Trust and reproducibility.
+  - id: d3-git-check-is-universal
+    title: Git/PR check is the universal integration
+    why: Works with every tool without permission.
+  - id: d4-open-core
+    title: Open core
+    why: Standard adoption; monetize cloud and intent.
+  - id: d5-ts-js-only-v1
+    title: TypeScript and JavaScript only in V1
+    why: Matches most AI-built projects and limits scope.
+  - id: d6-source-stays-local
+    title: Source never leaves the user's environment
+    why: Adoption and security.
+  - id: d7-packs-are-data
+    title: Packs are declarative data, never code
+    why: Safe community contributions, reviewable, deterministic.
+  - id: d8-packs-start-narrow
+    title: Packs start narrow, one stack and 15 to 20 rules
+    why: False positives are the main product risk.
