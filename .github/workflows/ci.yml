@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Unpack bundle.zip (if present)
+        run: |
+          if [ -f bundle.zip ]; then
+            unzip -oq bundle.zip
+            rm bundle.zip
+            if [ -f DELETE.txt ]; then
+              while IFS= read -r f || [ -n "$f" ]; do
+                case "$f" in ""|/*|*..*) continue ;; esac
+                rm -rf -- "$f"
+              done < DELETE.txt
+              rm DELETE.txt
+            fi
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add -A
+            git commit -m "Unpack bundle" || true
+            git push
+          fi
+
+      - uses: pnpm/action-setup@v4
+        if: ${{ hashFiles('package.json') != '' }}
+
+      - uses: actions/setup-node@v4
+        if: ${{ hashFiles('package.json') != '' }}
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        if: ${{ hashFiles('package.json') != '' }}
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Typecheck
+        if: ${{ hashFiles('package.json') != '' }}
+        run: pnpm typecheck
+
+      - name: Test
+        if: ${{ hashFiles('package.json') != '' }}
+        run: pnpm test
